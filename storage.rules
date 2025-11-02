@@ -1,0 +1,24 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAdmin() {
+      return request.auth != null && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function canAccessProject(projectId) {
+      return request.auth != null &&
+        (isAdmin() ||
+         (let u = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+          let p = firestore.get(/databases/(default)/documents/projects/$(projectId)).data;
+          u.role == 'client' && u.clientId == p.clientId));
+    }
+    
+    match /projects/{projectId}/{allPaths=**} {
+      allow read: if canAccessProject(projectId);
+      allow write: if canAccessProject(projectId);
+    }
+  }
+}

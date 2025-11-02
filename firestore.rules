@@ -1,0 +1,112 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper-Funktionen
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isClientOf(projectId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clientId == 
+        get(/databases/$(database)/documents/projects/$(projectId)).data.clientId;
+    }
+    
+    function canAccessProject(projectId) {
+      return isAdmin() || isClientOf(projectId);
+    }
+
+    // Bookings Collection - Öffentliches Booking-System (vorhandene Regeln)
+    match /bookings/{bookingId} {
+      // Jeder kann Buchungen lesen (für Verfügbarkeits-Prüfung)
+      allow read: if true;
+      
+      // Jeder kann neue Buchungen erstellen (nur mit bestimmten Validierungen)
+      allow create: if 
+        request.resource.data.keys().hasAll(['type', 'contact', 'date', 'time', 'duration', 'status', 'createdAt']) &&
+        request.resource.data.type is string &&
+        request.resource.data.type in ['phone', 'email'] &&
+        request.resource.data.contact is string &&
+        request.resource.data.contact.size() > 0 &&
+        request.resource.data.date is string &&
+        request.resource.data.time is string &&
+        request.resource.data.duration is int &&
+        request.resource.data.duration in [15, 30] &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.createdAt is timestamp &&
+        (!request.resource.data.keys().hasAny(['description']) || request.resource.data.description is string);
+      
+      // Updates und Deletes nur für Admins (später erweiterbar mit Authentication)
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Projekte
+    match /projects/{projectId} {
+      allow read: if isAdmin() || isClientOf(projectId);
+      allow write: if isAdmin();
+    }
+    
+    // Projekt-Updates
+    match /projectUpdates/{updateId} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+    
+    // Freigaben
+    match /approvals/{approvalId} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create: if isAdmin();
+      allow update: if canAccessProject(resource.data.projectId) && 
+        (isAdmin() || (request.auth.uid == request.resource.data.decidedBy));
+    }
+    
+    // Aufgaben
+    match /tasks/{taskId} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Dateien
+    match /files/{fileId} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create: if canAccessProject(resource.data.projectId);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Nachrichten
+    match /messages/{messageId} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create: if canAccessProject(resource.data.projectId);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Benutzer
+    match /users/{userId} {
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+    
+    // Kunden
+    match /clients/{clientId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Termine (Appointments)
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Fallback: Alle anderen Collections sind standardmäßig blockiert
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
