@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { handleMagicLink } from "@/hooks/useAuth"
@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 
-export default function AuthCallbackPage() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+function AuthCallbackForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
@@ -75,5 +78,30 @@ export default function AuthCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="mb-8">
+          <Image
+            src="/flownalogo.png"
+            alt="Flowna"
+            width={160}
+            height={42}
+            className="brightness-0 invert"
+          />
+        </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12">
+            <p className="text-center text-muted-foreground">Lädt...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AuthCallbackForm />
+    </Suspense>
   )
 }
