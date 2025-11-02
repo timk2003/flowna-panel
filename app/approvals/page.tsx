@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore"
+import { collection, query, where, getDocs, doc, updateDoc, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { ClientLayout } from "@/components/layouts/ClientLayout"
