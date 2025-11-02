@@ -40,7 +40,8 @@ service-account-key.json
 # vercel
 .vercel
 
-.md
+# markdown files (optional - entfernen falls README.md committed werden soll)
+# .md
 
 # typescript
 *.tsbuildinfo

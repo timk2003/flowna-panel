@@ -89,13 +89,85 @@ Die Firestore-Struktur ist in `types/index.ts` definiert. Hauptsammlungen:
 
 Der Invite-Flow sollte über eine Cloud Function oder Admin-Interface implementiert werden.
 
-## Deployment
+## Deployment auf Vercel
 
-Das Projekt kann einfach auf Vercel deployed werden:
+### Vorbereitung
 
-1. Verbinde dein Repository mit Vercel
-2. Füge die Firebase-Umgebungsvariablen in den Vercel-Settings hinzu
-3. Deploy!
+1. **Repository vorbereiten**:
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push
+   ```
+
+2. **Build lokal testen**:
+   ```bash
+   npm run build
+   ```
+   Stelle sicher, dass der Build ohne Fehler durchläuft.
+
+### Vercel Deployment
+
+#### Option 1: Via Vercel Dashboard (Empfohlen)
+
+1. Gehe zu [vercel.com](https://vercel.com) und melde dich an
+2. Klicke auf **"Add New Project"**
+3. Verbinde dein GitHub/GitLab/Bitbucket Repository
+4. Wähle das `flowna-panel` Repository aus
+5. Vercel erkennt automatisch Next.js - keine zusätzliche Konfiguration nötig
+6. **Wichtig**: Füge die Umgebungsvariablen hinzu:
+   - Klicke auf **"Environment Variables"**
+   - Füge alle Firebase-Variablen hinzu:
+     - `NEXT_PUBLIC_FIREBASE_API_KEY`
+     - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+     - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+     - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+     - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+     - `NEXT_PUBLIC_FIREBASE_APP_ID`
+   - Wähle **Production, Preview, Development** für alle
+7. Klicke auf **"Deploy"**
+
+#### Option 2: Via Vercel CLI
+
+1. Installiere Vercel CLI:
+   ```bash
+   npm i -g vercel
+   ```
+
+2. Deploy:
+   ```bash
+   vercel
+   ```
+
+3. Folge den Anweisungen und füge Umgebungsvariablen hinzu:
+   ```bash
+   vercel env add NEXT_PUBLIC_FIREBASE_API_KEY
+   vercel env add NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+   # ... für alle weiteren Variablen
+   ```
+
+### Nach dem Deployment
+
+1. **Firebase Auth Domain konfigurieren**:
+   - Gehe zur Firebase Console → Authentication → Settings
+   - Füge deine Vercel-URL zu den **Authorized domains** hinzu
+   - Beispiel: `flowna-panel.vercel.app` oder deine Custom Domain
+
+2. **Firebase Storage CORS konfigurieren** (falls nötig):
+   - Firebase Storage sollte automatisch funktionieren
+   - Bei Problemen: Firebase Console → Storage → Rules → CORS konfigurieren
+
+3. **Custom Domain (optional)**:
+   - In Vercel: Project Settings → Domains
+   - Füge deine Domain hinzu
+   - Folge den DNS-Anweisungen
+
+### Troubleshooting
+
+- **Build-Fehler**: Prüfe die Build-Logs in Vercel Dashboard
+- **Umgebungsvariablen**: Stelle sicher, dass alle `NEXT_PUBLIC_*` Variablen gesetzt sind
+- **Firebase-Verbindung**: Prüfe die Browser-Konsole auf Firebase-Fehler
+- **Images**: Next.js Image-Optimierung funktioniert automatisch auf Vercel
 
 ## Nächste Schritte / V2 Features
 
