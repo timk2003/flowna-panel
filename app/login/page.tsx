@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import Image from "next/image"
-import { sendMagicLink } from "@/hooks/useAuth"
+import { sendMagicLink, useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,11 +18,42 @@ const schema = z.object({
 
 export default function LoginPage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<{ email: string }>({
     resolver: zodResolver(schema),
   })
+
+  // Wenn User eingeloggt UND Client-Rolle, weiterleiten
+  // Aber NUR wenn loading fertig ist (verhindert Loop)
+  useEffect(() => {
+    if (!authLoading && user && user.role === "client") {
+      router.replace("/")
+    }
+  }, [user, authLoading, router])
+
+  // Zeige Ladebildschirm während initialem Auth-Check
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="mb-8">
+          <Image
+            src="/flownalogo.png"
+            alt="Flowna"
+            width={160}
+            height={42}
+            className="brightness-0 invert"
+          />
+        </div>
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12">
+            <p className="text-center text-muted-foreground">Lädt...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const onSubmit = async (data: { email: string }) => {
     setLoading(true)

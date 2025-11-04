@@ -102,3 +102,16 @@ export interface Appointment {
   when: Date
   status: string
 }
+
+export interface Booking {
+  id: string
+  type: "phone" | "email"
+  contact: string
+  date: string
+  time: string
+  duration: number
+  status: string
+  description?: string
+  notes?: string
+  createdAt: Date
+}

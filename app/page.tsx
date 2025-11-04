@@ -14,7 +14,7 @@ import { de } from "date-fns/locale"
 import { Calendar, CheckCircle2, Clock } from "lucide-react"
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [updates, setUpdates] = useState<ProjectUpdate[]>([])
@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Warte auf Auth-Loading
+    if (authLoading) return
     if (!user?.clientId) return
 
     const loadData = async () => {

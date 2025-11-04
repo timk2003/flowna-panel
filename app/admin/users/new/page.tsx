@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { createUserWithEmailAndPassword } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, setDoc, collection, query, getDocs } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import { AdminLayout } from "@/components/layouts/AdminLayout"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
+import { Client } from "@/types"
 
 const schema = z.object({
   name: z.string().min(2, "Name muss mindestens 2 Zeichen lang sein"),
@@ -22,6 +23,14 @@ const schema = z.object({
   password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein"),
   role: z.enum(["admin", "client"]),
   clientId: z.string().optional(),
+}).refine((data) => {
+  if (data.role === "client") {
+    return !!data.clientId && data.clientId.length > 0
+  }
+  return true
+}, {
+  message: "Bitte wählen Sie einen Kunden aus",
+  path: ["clientId"],
 })
 
 export default function NewUserPage() {
@@ -30,6 +39,7 @@ export default function NewUserPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
   const { register, handleSubmit, formState: { errors }, watch } = useForm<{
     name: string
     email: string
@@ -44,6 +54,25 @@ export default function NewUserPage() {
   })
 
   const role = watch("role")
+
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const clientsQuery = query(collection(db, "clients"))
+        const clientsSnapshot = await getDocs(clientsQuery)
+        const clientsData = clientsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        })) as Client[]
+        setClients(clientsData)
+      } catch (error) {
+        console.error("Error loading clients:", error)
+      }
+    }
+
+    loadClients()
+  }, [])
 
   const onSubmit = async (data: {
     name: string
@@ -189,15 +218,26 @@ export default function NewUserPage() {
 
               {role === "client" && (
                 <div>
-                  <Label htmlFor="clientId">Client ID (optional)</Label>
-                  <Input
+                  <Label htmlFor="clientId">Kunde *</Label>
+                  <Select
                     id="clientId"
                     {...register("clientId")}
                     className="mt-2"
-                    placeholder="client-id"
-                  />
+                  >
+                    <option value="">Bitte wählen...</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </Select>
+                  {errors.clientId && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.clientId.message}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    Die Client ID muss zu einem vorhandenen Client in der clients Collection gehören.
+                    Der Benutzer wird diesem Kunden zugeordnet.
                   </p>
                 </div>
               )}

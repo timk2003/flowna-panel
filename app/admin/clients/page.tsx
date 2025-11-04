@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { collection, query, getDocs, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AdminLayout } from "@/components/layouts/AdminLayout"
@@ -13,6 +14,7 @@ import { Plus, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminClientsPage() {
+  const router = useRouter()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -70,7 +72,11 @@ export default function AdminClientsPage() {
             </p>
           ) : (
             clients.map((client) => (
-              <Card key={client.id}>
+              <Card
+                key={client.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => router.push(`/admin/clients/${client.id}`)}
+              >
                 <CardHeader>
                   <CardTitle>{client.name}</CardTitle>
                 </CardHeader>
@@ -81,6 +87,7 @@ export default function AdminClientsPage() {
                       <a
                         href={`mailto:${client.contactEmail}`}
                         className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {client.contactEmail}
                       </a>

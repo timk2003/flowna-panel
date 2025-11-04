@@ -17,6 +17,7 @@ import {
   LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { signOut } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
@@ -37,8 +38,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "client")) {
-      router.push("/login")
+    // Nur weiterleiten wenn loading fertig UND wirklich kein User vorhanden
+    // Verwende replace statt push um History-Stack zu vermeiden
+    if (!loading && !user) {
+      router.replace("/login")
     }
   }, [user, loading, router])
 
@@ -50,8 +53,31 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user || user.role !== "client") {
-    return null
+  if (!user) {
+    return null // Wird zu /login weitergeleitet
+  }
+
+  if (user.role !== "client") {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-6">
+            <p className="text-destructive">
+              Sie haben keinen Zugriff auf das Kunden-Panel. Bitte melden Sie sich mit einem Kunden-Account an.
+            </p>
+            <Button 
+              className="mt-4" 
+              onClick={() => {
+                signOut()
+                router.push("/login")
+              }}
+            >
+              Abmelden
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const handleSignOut = async () => {
