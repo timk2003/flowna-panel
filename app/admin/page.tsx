@@ -36,8 +36,8 @@ export default function AdminProjectsPage() {
         )
         const projectsSnapshot = await getDocs(projectsQuery)
         const projectsData = await Promise.all(
-          projectsSnapshot.docs.map(async (doc) => {
-            const data = doc.data()
+          projectsSnapshot.docs.map(async (projectDoc) => {
+            const data = projectDoc.data()
             let clientName = ""
             if (data.clientId) {
               try {
@@ -50,7 +50,7 @@ export default function AdminProjectsPage() {
               }
             }
             return {
-              id: doc.id,
+              id: projectDoc.id,
               ...data,
               clientName,
               createdAt: data.createdAt?.toDate() || new Date(),

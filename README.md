@@ -120,17 +120,226 @@ Das Admin-Panel bietet umfassende Verwaltungs- und Steuerungsfunktionen:
 - **ESLint** - Code-Quality und Best Practices
 - **Vercel** - Hosting und Deployment-Plattform
 
-## Setup
+## 📦 Datenmodell & Architektur
 
-### 1. Dependencies installieren
+### Firestore Collections
+
+Die Datenbank-Struktur ist vollständig in TypeScript typisiert (`types/index.ts`):
+
+#### **users**
+Benutzer-Accounts mit Rollenverwaltung
+```typescript
+{
+  id: string
+  name: string
+  email: string
+  role: "admin" | "client"
+  clientId?: string  // Referenz auf clients-Collection
+  photoURL?: string
+  createdAt: Date
+}
+```
+
+#### **clients**
+Kunden-Informationen
+```typescript
+{
+  id: string
+  name: string
+  contactEmail: string
+  phone?: string
+  notes?: string  // Interne Admin-Notizen
+  createdAt: Date
+}
+```
+
+#### **projects**
+Projekte mit Status-Tracking
+```typescript
+{
+  id: string
+  clientId: string
+  title: string
+  type: "Website" | "Branding" | "Shopify" | "App" | "Other"
+  status: "Planning" | "Design" | "Build" | "Review" | "Done" | "OnHold"
+  progress: number  // 0-100
+  ownerId: string  // Admin, der das Projekt betreut
+  budgetRange?: string
+  goals: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+#### **projectUpdates**
+Timeline-Einträge für Projektverlauf
+```typescript
+{
+  id: string
+  projectId: string
+  kind: "milestone" | "note" | "delivery" | "request"
+  title: string
+  body: string
+  createdBy: string  // User-ID
+  createdAt: Date
+  pinned: boolean  // Wichtige Updates anpinnen
+}
+```
+
+#### **approvals**
+Freigabe-Management
+```typescript
+{
+  id: string
+  projectId: string
+  itemTitle: string
+  status: "pending" | "approved" | "changes"
+  comment?: string
+  requestedAt: Date
+  decidedAt?: Date
+  decidedBy?: string  // Client User-ID
+}
+```
+
+#### **tasks**
+Aufgaben für Kunden oder interne Teams
+```typescript
+{
+  id: string
+  projectId: string
+  for: "client" | "internal"
+  title: string
+  dueAt?: Date
+  done: boolean
+  createdAt: Date
+}
+```
+
+#### **files**
+Datei-Metadaten (Dateien selbst in Firebase Storage)
+```typescript
+{
+  id: string
+  projectId: string
+  path: string  // Storage-Pfad
+  label: string
+  size: number
+  contentType: string
+  uploadedBy: string  // User-ID
+  createdAt: Date
+}
+```
+
+#### **messages**
+Echtzeit-Nachrichten pro Projekt
+```typescript
+{
+  id: string
+  projectId: string
+  senderId: string  // User-ID
+  text: string
+  attachments?: string[]  // Optional: Datei-Referenzen
+  createdAt: Date
+}
+```
+
+#### **appointments**
+Terminverwaltung
+```typescript
+{
+  id: string
+  projectId?: string
+  name: string
+  email: string
+  topic: string
+  duration: number  // in Minuten
+  when: Date
+  status: string
+}
+```
+
+### Security & Zugriffsrechte
+
+Firebase Security Rules sorgen für rollenbasierte Zugriffskontrolle:
+
+- **Admins**: Vollzugriff auf alle Daten
+- **Clients**: Nur Zugriff auf eigene Projekte (via `clientId`-Verknüpfung)
+- **Storage**: Projekt-spezifische Ordnerstruktur mit entsprechenden Rechten
+
+Details siehe `FIREBASE_RULES.md`
+
+## 🔄 Workflow & User Journey
+
+### Typischer Projekt-Ablauf:
+
+1. **Admin erstellt neuen Kunden**
+   - Eingabe von Kontaktdaten
+   - System generiert Client-Account
+
+2. **Admin legt Projekt an**
+   - Projektdetails, Typ, Budget-Range
+   - Zuordnung zum Kunden
+   - Projekt erscheint automatisch im Client-Dashboard
+
+3. **Kunde erhält Magic Link**
+   - Passwortloser Login per E-Mail
+   - Direkter Zugriff auf Projekt-Dashboard
+
+4. **Admin postet Updates**
+   - Meilensteine: "Design-Phase abgeschlossen"
+   - Lieferungen: "Erste Wireframes verfügbar"
+   - Anfragen: "Feedback zu Logo-Entwürfen benötigt"
+   - Updates erscheinen in Echtzeit in der Kunden-Timeline
+
+5. **Kunde interagiert**
+   - Designs freigeben oder Änderungen anfordern
+   - Dateien hochladen (Fotos, Texte, etc.)
+   - Nachrichten senden
+   - Aufgaben abhaken
+
+6. **Admin sieht alles zentral**
+   - Inbox zeigt alle neuen Aktivitäten
+   - Direkte Navigation zu relevanten Projekten
+   - Echtzeit-Updates bei neuen Nachrichten
+
+7. **Projekt-Abschluss**
+   - Status auf "Done" setzen
+   - Finale Lieferungen hochladen
+   - Projekt bleibt zur Referenz zugänglich
+
+## 🚀 Setup & Installation
+
+### Voraussetzungen
+
+- Node.js 18+ und npm
+- Firebase-Account (kostenlos)
+- Git
+
+### 1. Repository klonen
+
+```bash
+git clone <repository-url>
+cd flowna-panel
+```
+
+### 2. Dependencies installieren
 
 ```bash
 npm install
 ```
 
-### 2. Firebase-Konfiguration
+### 3. Firebase-Projekt erstellen
 
-Erstelle eine `.env.local` Datei im Root-Verzeichnis mit folgenden Variablen:
+1. Gehe zu [Firebase Console](https://console.firebase.google.com/)
+2. Erstelle ein neues Projekt
+3. Aktiviere:
+   - **Authentication** (E-Mail/Password + E-Mail-Link)
+   - **Firestore Database** (Production Mode)
+   - **Storage** (Production Mode)
+
+### 4. Umgebungsvariablen konfigurieren
+
+Erstelle eine `.env.local` Datei im Root-Verzeichnis:
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=deine-api-key
@@ -141,133 +350,232 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=deine-sender-id
 NEXT_PUBLIC_FIREBASE_APP_ID=deine-app-id
 ```
 
-### 3. Firebase Security Rules
+> Firebase-Config findest du in: Firebase Console → Projekteinstellungen → Deine Apps
+
+### 5. Firebase Security Rules einrichten
 
 Kopiere die Rules aus `FIREBASE_RULES.md` in die Firebase Console:
 
 - **Firestore Rules**: Firestore Database → Rules
 - **Storage Rules**: Storage → Rules
-- **Indexe erstellen**: Firestore Database → Indexes
+- **Composite Indexes**: Firestore Database → Indexes (automatisch erstellt bei erster Nutzung)
 
-### 4. Entwicklungsserver starten
+### 6. Entwicklungsserver starten
 
 ```bash
 npm run dev
 ```
 
-Die Anwendung läuft dann auf [http://localhost:3000](http://localhost:3000).
+Die Anwendung läuft auf [http://localhost:3000](http://localhost:3000)
 
-## Datenmodell
+### 7. Ersten Admin-User erstellen
 
-Die Firestore-Struktur ist in `types/index.ts` definiert. Hauptsammlungen:
+Da noch keine Benutzer existieren, musst du den ersten Admin manuell anlegen:
 
-- `users` - Benutzer mit Rollen (admin/client)
-- `clients` - Kundeninformationen
-- `projects` - Projekte mit Status und Fortschritt
-- `projectUpdates` - Timeline-Updates
-- `approvals` - Freigabe-Items
-- `tasks` - Aufgaben für Kunden oder intern
-- `files` - Datei-Metadaten
-- `messages` - Nachrichten pro Projekt
-- `appointments` - Terminbuchungen
+1. Registriere einen User über Firebase Console (Authentication → Users → Add user)
+2. Erstelle ein Dokument in der `users` Collection:
+   ```json
+   {
+     "id": "<firebase-user-id>",
+     "name": "Admin Name",
+     "email": "admin@example.com",
+     "role": "admin",
+     "createdAt": "<current-timestamp>"
+   }
+   ```
 
-## Authentifizierung
+Alternativ kannst du das Setup-Script nutzen (siehe `scripts/` Ordner)
 
-- **Kunden**: E-Mail-Link-Login (Magic Link)
-- **Admin**: Klassisches E-Mail-Passwort-Login
-
-Der Invite-Flow sollte über eine Cloud Function oder Admin-Interface implementiert werden.
-
-## Deployment auf Vercel
+## 🌐 Deployment auf Vercel
 
 ### Vorbereitung
 
-1. **Repository vorbereiten**:
+1. **Build lokal testen**:
+   ```bash
+   npm run build
+   npm run start  # Production-Server lokal testen
+   ```
+
+2. **Repository committen**:
    ```bash
    git add .
    git commit -m "Ready for deployment"
    git push
    ```
 
-2. **Build lokal testen**:
-   ```bash
-   npm run build
-   ```
-   Stelle sicher, dass der Build ohne Fehler durchläuft.
+### Deployment-Optionen
 
-### Vercel Deployment
-
-#### Option 1: Via Vercel Dashboard (Empfohlen)
+#### 👍 Option 1: Vercel Dashboard (Empfohlen)
 
 1. Gehe zu [vercel.com](https://vercel.com) und melde dich an
-2. Klicke auf **"Add New Project"**
-3. Verbinde dein GitHub/GitLab/Bitbucket Repository
-4. Wähle das `flowna-panel` Repository aus
-5. Vercel erkennt automatisch Next.js - keine zusätzliche Konfiguration nötig
-6. **Wichtig**: Füge die Umgebungsvariablen hinzu:
-   - Klicke auf **"Environment Variables"**
-   - Füge alle Firebase-Variablen hinzu:
-     - `NEXT_PUBLIC_FIREBASE_API_KEY`
-     - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-     - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-     - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-     - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-     - `NEXT_PUBLIC_FIREBASE_APP_ID`
-   - Wähle **Production, Preview, Development** für alle
-7. Klicke auf **"Deploy"**
-
-#### Option 2: Via Vercel CLI
-
-1. Installiere Vercel CLI:
-   ```bash
-   npm i -g vercel
+2. **"Add New Project"** → Repository auswählen
+3. Framework Preset: **Next.js** (automatisch erkannt)
+4. **Environment Variables** hinzufügen:
    ```
-
-2. Deploy:
-   ```bash
-   vercel
+   NEXT_PUBLIC_FIREBASE_API_KEY
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+   NEXT_PUBLIC_FIREBASE_APP_ID
    ```
+   > Tipp: Wähle "Production, Preview, Development" für alle Variablen
 
-3. Folge den Anweisungen und füge Umgebungsvariablen hinzu:
-   ```bash
-   vercel env add NEXT_PUBLIC_FIREBASE_API_KEY
-   vercel env add NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-   # ... für alle weiteren Variablen
-   ```
+5. **Deploy** klicken → Fertig! 🎉
 
-### Nach dem Deployment
+#### ⌨️ Option 2: Vercel CLI
 
-1. **Firebase Auth Domain konfigurieren**:
-   - Gehe zur Firebase Console → Authentication → Settings
-   - Füge deine Vercel-URL zu den **Authorized domains** hinzu
-   - Beispiel: `flowna-panel.vercel.app` oder deine Custom Domain
+```bash
+# CLI installieren
+npm i -g vercel
 
-2. **Firebase Storage CORS konfigurieren** (falls nötig):
-   - Firebase Storage sollte automatisch funktionieren
-   - Bei Problemen: Firebase Console → Storage → Rules → CORS konfigurieren
+# Deploy starten
+vercel
 
-3. **Custom Domain (optional)**:
-   - In Vercel: Project Settings → Domains
-   - Füge deine Domain hinzu
-   - Folge den DNS-Anweisungen
+# Umgebungsvariablen setzen
+vercel env add NEXT_PUBLIC_FIREBASE_API_KEY
+vercel env add NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+# ... etc.
 
-### Troubleshooting
+# Production Deployment
+vercel --prod
+```
 
-- **Build-Fehler**: Prüfe die Build-Logs in Vercel Dashboard
-- **Umgebungsvariablen**: Stelle sicher, dass alle `NEXT_PUBLIC_*` Variablen gesetzt sind
-- **Firebase-Verbindung**: Prüfe die Browser-Konsole auf Firebase-Fehler
-- **Images**: Next.js Image-Optimierung funktioniert automatisch auf Vercel
+### Post-Deployment Setup
 
-## Nächste Schritte / V2 Features
+#### 1. Firebase Auth Domain autorisieren
 
-- [ ] Cloud Functions für E-Mail-Benachrichtigungen
-- [ ] Figma-Embed Integration
-- [ ] Erweiterte Berichte und Statistiken
-- [ ] Webhook-Integration
-- [ ] Erweiterte Rollen & Rechte
-- [ ] Multi-Projekt-Support pro Kunde
-- [ ] Kanban-Board für Admin-Projektübersicht
+Fire Console → Authentication → Settings → Authorized domains:
+- Füge hinzu: `deine-app.vercel.app`
+- Bei Custom Domain: `deine-domain.de`
 
-## Lizenz
+#### 2. Custom Domain einrichten (optional)
 
-Privat - Flowna
+Vercel Dashboard → Project Settings → Domains:
+1. Domain hinzufügen
+2. DNS-Records konfigurieren (A/CNAME)
+3. SSL wird automatisch bereitgestellt
+
+#### 3. Performance optimieren
+
+- **Image Optimization**: Funktioniert automatisch auf Vercel
+- **Caching**: Next.js Static Generation wird genutzt
+- **Edge Functions**: Für globale Performance
+
+### 🔧 Troubleshooting
+
+| Problem | Lösung |
+|---------|--------|
+| Build-Fehler | Build-Logs in Vercel Dashboard prüfen |
+| Firebase Auth Error | Authorized Domains in Firebase prüfen |
+| Umgebungsvariablen fehlen | Alle `NEXT_PUBLIC_*` Variablen setzen |
+| Storage Upload Error | CORS-Konfiguration in Firebase Storage |
+| TypeScript Errors | `npm run build` lokal ausführen |
+
+## 📚 Weitere Dokumentation
+
+- **`FIREBASE_RULES.md`** - Security Rules für Firestore und Storage
+- **`DEPLOYMENT.md`** - Erweiterte Deployment-Anleitung
+- **`README_ADMIN_SETUP.md`** - Admin-Setup und erste Schritte
+- **`types/index.ts`** - Vollständige TypeScript-Typdefinitionen
+
+## 🛠️ Entwicklung
+
+### Projekt-Struktur
+
+```
+flowna-panel/
+├── app/                    # Next.js App Router
+│   ├── (client-routes)/    # Kunden-Seiten
+│   │   ├── page.tsx        # Dashboard
+│   │   ├── timeline/       # Projektverlauf
+│   │   ├── designs/        # Design-Vorschauen
+│   │   ├── approvals/      # Freigaben
+│   │   ├── files/          # Dateiverwaltung
+│   │   ├── tasks/          # Aufgaben
+│   │   └── messages/       # Nachrichten
+│   └── admin/              # Admin-Panel
+│       ├── projects/       # Projektverwaltung
+│       ├── clients/        # Kundenverwaltung
+│       ├── inbox/          # Eingangsverwaltung
+│       ├── appointments/   # Terminverwaltung
+│       ├── reports/        # Berichte
+│       └── settings/       # Einstellungen
+├── components/            # Wiederverwendbare UI-Komponenten
+├── lib/                   # Utilities und Firebase-Config
+├── types/                 # TypeScript-Typdefinitionen
+├── hooks/                 # Custom React Hooks
+└── public/                # Statische Assets
+```
+
+### Scripts
+
+```bash
+npm run dev      # Entwicklungsserver (localhost:3000)
+npm run build    # Production Build
+npm run start    # Production Server lokal
+npm run lint     # ESLint prüfen
+```
+
+### Code-Standards
+
+- **TypeScript**: Strikte Typisierung für alle Komponenten
+- **ESLint**: Next.js-Konfiguration
+- **Tailwind**: Utility-First CSS mit konsistenten Design-Tokens
+- **Komponenten**: shadcn/ui für konsistente UI
+
+## 🚀 Roadmap & geplante Features
+
+### Version 2.0
+- [ ] **E-Mail-Benachrichtigungen** via Firebase Functions
+- [ ] **Figma-Embed** direkt in Design-Ansicht
+- [ ] **Erweiterte Berichte** mit Grafiken und Analysen
+- [ ] **Webhook-Integration** für externe Tools
+- [ ] **Multi-Projekt-Support** für Kunden mit mehreren Projekten
+
+### Version 2.1
+- [ ] **Kanban-Board** für Admin-Projektansicht
+- [ ] **Erweiterte Rollen** (z.B. Projektmanager, Designer)
+- [ ] **Kommentar-Funktion** in Dateien und Designs
+- [ ] **Invoice-Integration** für Rechnungsstellung
+- [ ] **Mobile App** (React Native)
+
+### Version 3.0
+- [ ] **White-Label** Anpassungen für verschiedene Agenturen
+- [ ] **API** für externe Integrationen
+- [ ] **Time-Tracking** für Projektzeit-Erfassung
+- [ ] **Resource-Planning** für Team-Auslastung
+
+## ❓ FAQ
+
+**Q: Kann ich das Panel für mehrere Agenturen nutzen?**  
+A: Aktuell ist es für eine Agentur optimiert. White-Label-Support ist für v3.0 geplant.
+
+**Q: Werden E-Mails automatisch versendet?**  
+A: Noch nicht. E-Mail-Benachrichtigungen via Firebase Functions sind in Entwicklung.
+
+**Q: Ist Multi-Tenant-Support verfügbar?**  
+A: Nein, aber durch Firebase-Isolation könnten mehrere Instanzen parallel laufen.
+
+**Q: Kann ich eigene Branding-Farben nutzen?**  
+A: Ja, über die Admin-Einstellungen (Branding-Sektion).
+
+**Q: Wie skaliert die Anwendung?**  
+A: Durch Firebase und Vercel automatisch. Bei sehr hohen Nutzerzahlen ggf. Firebase-Plan upgraden.
+
+## 👥 Support & Contribution
+
+Dieses Projekt ist privat für Flowna entwickelt. Bei Fragen oder Feature-Requests:
+
+- 📧 E-Mail: support@flowna.de
+- 🐛 Issues: GitHub Issues (falls Repository public)
+- 📝 Dokumentation: Siehe `/docs` Ordner
+
+## 📜 Lizenz
+
+**Privat © 2025 Flowna**  
+Alle Rechte vorbehalten. Nicht zur kommerziellen Weiterverbreitung geeignet.
+
+---
+
+**Gebaut mit ❤️ von Flowna**

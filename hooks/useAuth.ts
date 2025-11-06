@@ -48,9 +48,9 @@ export function useAuth() {
             const newUserData = {
               name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
               email: firebaseUser.email || "",
-              role: "client", // Default für Magic Link Login
-              clientId: null, // Muss später vom Admin zugewiesen werden
-              photoURL: firebaseUser.photoURL || null,
+              role: "client" as const, // Default für Magic Link Login
+              clientId: undefined, // Muss später vom Admin zugewiesen werden
+              photoURL: firebaseUser.photoURL || undefined,
               createdAt: new Date(),
             }
             
@@ -62,7 +62,6 @@ export function useAuth() {
               setUser({
                 id: firebaseUser.uid,
                 ...newUserData,
-                photoURL: newUserData.photoURL || undefined,
               })
             } catch (createError) {
               console.error("Error creating user document:", createError)
