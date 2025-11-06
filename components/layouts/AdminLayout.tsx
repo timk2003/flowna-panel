@@ -2,9 +2,11 @@
 
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
 import { 
   LayoutDashboard, 
   FolderKanban,
@@ -32,12 +34,25 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const [logoUrl, setLogoUrl] = useState<string>("")
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) {
       router.push("/admin/login")
     }
   }, [user, loading, router])
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, "settings", "app"))
+        if (snap.exists()) {
+          setLogoUrl((snap.data() as any).logoUrl || "")
+        }
+      } catch {}
+    }
+    loadSettings()
+  }, [])
 
   if (loading) {
     return (
@@ -61,13 +76,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="flex">
         <aside className="w-64 border-r bg-card">
           <div className="flex h-16 items-center border-b px-6">
-            <Image
-              src="/flownalogo.png"
-              alt="Flowna"
-              width={120}
-              height={32}
-              className="brightness-0 invert"
-            />
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="Logo" className="h-6 w-auto invert" />
+            ) : (
+              <Image
+                src="/flownalogo.png"
+                alt="Flowna"
+                width={120}
+                height={32}
+                className="brightness-0 invert"
+              />
+            )}
           </div>
           <nav className="p-4 pb-20 space-y-1">
             {navigation.map((item) => {

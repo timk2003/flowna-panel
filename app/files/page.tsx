@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { collection, query, where, getDocs, addDoc, limit } from "firebase/firestore"
+import { collection, query, where, getDocs, addDoc, limit, serverTimestamp } from "firebase/firestore"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { db, storage } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
@@ -64,6 +64,11 @@ export default function FilesPage() {
       alert(`Datei ist zu groß. Maximale Größe: ${MAX_FILE_SIZE / 1024 / 1024}MB`)
       return
     }
+    // Optional: einfache Typprüfung
+    if (ALLOWED_TYPES.length && !ALLOWED_TYPES.some((t) => file.type.startsWith(t.replace("*", "")))) {
+      alert("Dateityp wird nicht unterstützt.")
+      return
+    }
 
     setUploading(true)
     try {
@@ -72,8 +77,15 @@ export default function FilesPage() {
       const storageRef = ref(storage, filePath)
 
       const uploadTask = uploadBytesResumable(storageRef, file)
-      
-      await uploadTask
+      // Warten bis Upload abgeschlossen ist
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          undefined,
+          (err) => reject(err),
+          () => resolve()
+        )
+      })
 
       const downloadURL = await getDownloadURL(storageRef)
 
@@ -84,21 +96,29 @@ export default function FilesPage() {
         size: file.size,
         contentType: file.type,
         uploadedBy: user.id,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
+      })
+
+      // Ereignis loggen
+      await addDoc(collection(db, "events"), {
+        type: "upload",
+        projectId,
+        title: "Neue Datei hochgeladen",
+        description: file.name,
+        createdAt: serverTimestamp(),
+        read: false,
       })
 
       // Datei zur Liste hinzufügen
-      const newFile: File = {
-        id: fileId,
-        projectId,
-        path: filePath,
-        label: file.name,
-        size: file.size,
-        contentType: file.type,
-        uploadedBy: user.id,
-        createdAt: new Date(),
-      }
-      setFiles((prev) => [newFile, ...prev])
+      // Liste neu laden, um serverTimestamp korrekt zu haben
+      const filesQuery = query(collection(db, "files"), where("projectId", "==", projectId))
+      const filesSnapshot = await getDocs(filesQuery)
+      const filesData = filesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as File[]
+      setFiles(filesData)
     } catch (error) {
       console.error("Error uploading file:", error)
       alert("Fehler beim Hochladen der Datei. Bitte versuchen Sie es erneut.")

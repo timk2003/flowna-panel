@@ -1,53 +1,79 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { AdminLayout } from "@/components/layouts/AdminLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, Upload, MessageSquare, CheckCircle2 } from "lucide-react"
+import { CheckCircle, Upload, MessageSquare, CheckCircle2, FilePlus2, ListChecks, StickyNote } from "lucide-react"
+import { db } from "@/lib/firebase"
+import { collection, getDocs, orderBy, query, limit, writeBatch, doc, updateDoc } from "firebase/firestore"
 
 export default function AdminInboxPage() {
-  // Beispiel-Daten - sollten aus Firestore kommen
-  const items = [
-    {
-      id: "1",
-      type: "upload" as const,
-      title: "Neue Datei hochgeladen",
-      description: "Kunde hat eine neue Datei hochgeladen",
-      project: "Website Redesign",
-      time: "vor 2 Stunden",
-      read: false,
-    },
-    {
-      id: "2",
-      type: "approval" as const,
-      title: "Freigabe-Entscheidung",
-      description: "Kunde hat ein Item freigegeben",
-      project: "Branding Package",
-      time: "vor 5 Stunden",
-      read: false,
-    },
-    {
-      id: "3",
-      type: "message" as const,
-      title: "Neue Nachricht",
-      description: "Kunde hat eine Nachricht gesendet",
-      project: "Website Redesign",
-      time: "vor 1 Tag",
-      read: true,
-    },
-  ]
+  const [items, setItems] = useState<Array<{
+    id: string
+    type: string
+    title: string
+    description?: string
+    projectTitle?: string
+    projectId: string
+    read?: boolean
+    createdAt?: Date
+  }>>([])
 
-  const typeIcons = {
+  useEffect(() => {
+    const load = async () => {
+      const q = query(collection(db, "events"), orderBy("createdAt", "desc"), limit(100))
+      const snap = await getDocs(q)
+      setItems(snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as any),
+        createdAt: d.data().createdAt?.toDate() || new Date(),
+      })))
+    }
+    load()
+  }, [])
+
+  const typeIcons: Record<string, any> = {
     upload: Upload,
-    approval: CheckCircle2,
     message: MessageSquare,
+    approval_created: FilePlus2,
+    approval_decided: CheckCircle2,
+    task_created: ListChecks,
+    update_created: StickyNote,
   }
 
-  const typeLabels = {
+  const typeLabels: Record<string, string> = {
     upload: "Upload",
-    approval: "Freigabe",
     message: "Nachricht",
+    approval_created: "Freigabe angelegt",
+    approval_decided: "Freigabe entschieden",
+    task_created: "Aufgabe angelegt",
+    update_created: "Update erstellt",
+  }
+
+  const markAllRead = async () => {
+    try {
+      const batch = writeBatch(db)
+      const toUpdate = items.filter((i) => !i.read)
+      toUpdate.forEach((i) => {
+        batch.update(doc(db, "events", i.id), { read: true })
+      })
+      if (toUpdate.length > 0) {
+        await batch.commit()
+      }
+      setItems((prev) => prev.map((i) => ({ ...i, read: true })))
+    } catch (e) {
+      // Fallback: UI trotzdem aktualisieren
+      setItems((prev) => prev.map((i) => ({ ...i, read: true })))
+    }
+  }
+
+  const markOneRead = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "events", id), { read: true })
+    } catch {}
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, read: true } : i)))
   }
 
   return (
@@ -55,7 +81,7 @@ export default function AdminInboxPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Eingänge</h1>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={markAllRead}>
             Alle als erledigt markieren
           </Button>
         </div>
@@ -75,7 +101,7 @@ export default function AdminInboxPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <div className="rounded-full bg-muted p-2">
-                        <Icon className="h-5 w-5" />
+                        {Icon ? <Icon className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -91,14 +117,14 @@ export default function AdminInboxPage() {
                         </p>
                         <div className="flex items-center gap-4 mt-2">
                           <Badge variant="outline" className="text-xs">
-                            {typeLabels[item.type]}
+                            {typeLabels[item.type] || item.type}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                            {item.project} • {item.time}
+                            {item.projectTitle || item.projectId} • {item.createdAt?.toLocaleString()}
                           </span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => markOneRead(item.id)}>
                         <CheckCircle className="h-5 w-5" />
                       </Button>
                     </div>

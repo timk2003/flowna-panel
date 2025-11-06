@@ -336,6 +336,14 @@ export default function ProjectDetailPage() {
         status: "pending",
         requestedAt: serverTimestamp(),
       })
+      await addDoc(collection(db, "events"), {
+        type: "approval_created",
+        projectId,
+        title: "Freigabe angelegt",
+        description: data.itemTitle,
+        createdAt: serverTimestamp(),
+        read: false,
+      })
       setShowApprovalDialog(false)
       resetApproval()
       // Reload approvals
@@ -460,8 +468,15 @@ export default function ProjectDetailPage() {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
         setUploadProgress(progress)
       })
-
-      await uploadTask
+      
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          undefined,
+          (err) => reject(err),
+          () => resolve()
+        )
+      })
       const downloadURL = await getDownloadURL(storageRef)
 
       await addDoc(collection(db, "files"), {
@@ -472,6 +487,14 @@ export default function ProjectDetailPage() {
         contentType: file.type,
         uploadedBy: user.id,
         createdAt: serverTimestamp(),
+      })
+      await addDoc(collection(db, "events"), {
+        type: "upload",
+        projectId,
+        title: "Neue Datei hochgeladen",
+        description: file.name,
+        createdAt: serverTimestamp(),
+        read: false,
       })
 
       // Reload files
@@ -540,6 +563,14 @@ export default function ProjectDetailPage() {
         text: data.text,
         attachments: [],
         createdAt: serverTimestamp(),
+      })
+      await addDoc(collection(db, "events"), {
+        type: "message",
+        projectId,
+        title: "Neue Nachricht",
+        description: data.text.slice(0, 120),
+        createdAt: serverTimestamp(),
+        read: false,
       })
       resetMessage()
       // Reload messages
@@ -1096,25 +1127,27 @@ export default function ProjectDetailPage() {
               <DialogTitle>Update erstellen</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmitUpdate(onSubmitUpdate)} className="space-y-4">
-              <div>
-                <Label htmlFor="kind">Art</Label>
-                <Select {...registerUpdate("kind")} className="mt-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="kind">Art</Label>
+                  <Select {...registerUpdate("kind")} className="mt-2">
                   <option value="milestone">Meilenstein</option>
                   <option value="note">Notiz</option>
                   <option value="delivery">Lieferung</option>
                   <option value="request">Anfrage</option>
-                </Select>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="title">Titel</Label>
+                  <Input {...registerUpdate("title")} className="mt-2" />
+                  {errorsUpdate.title && (
+                    <p className="text-sm text-destructive mt-1">{errorsUpdate.title.message}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="title">Titel</Label>
-                <Input {...registerUpdate("title")} className="mt-2" />
-                {errorsUpdate.title && (
-                  <p className="text-sm text-destructive mt-1">{errorsUpdate.title.message}</p>
-                )}
-              </div>
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="body">Beschreibung</Label>
-                <Textarea {...registerUpdate("body")} className="mt-2 min-h-[120px]" />
+                <Textarea {...registerUpdate("body")} className="mt-2 min-h-[160px]" />
                 {errorsUpdate.body && (
                   <p className="text-sm text-destructive mt-1">{errorsUpdate.body.message}</p>
                 )}
@@ -1158,23 +1191,25 @@ export default function ProjectDetailPage() {
               <DialogTitle>Aufgabe erstellen</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmitTask(onSubmitTask)} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Titel</Label>
-                <Input {...registerTask("title")} className="mt-2" />
-                {errorsTask.title && (
-                  <p className="text-sm text-destructive mt-1">{errorsTask.title.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="for">Für</Label>
-                <Select {...registerTask("for")} className="mt-2">
-                  <option value="client">Kunde</option>
-                  <option value="internal">Intern</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="dueAt">Fälligkeitsdatum (optional)</Label>
-                <Input {...registerTask("dueAt")} type="date" className="mt-2" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="title">Titel</Label>
+                  <Input {...registerTask("title")} className="mt-2" />
+                  {errorsTask.title && (
+                    <p className="text-sm text-destructive mt-1">{errorsTask.title.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="for">Für</Label>
+                  <Select {...registerTask("for")} className="mt-2">
+                    <option value="client">Kunde</option>
+                    <option value="internal">Intern</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="dueAt">Fälligkeitsdatum (optional)</Label>
+                  <Input {...registerTask("dueAt")} type="date" className="mt-2" />
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowTaskDialog(false)}>

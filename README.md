@@ -1,35 +1,124 @@
 # Flowna Panel
 
-Ein umfassendes Kunden- und Admin-Panel für Projektmanagement, gebaut mit Next.js, Firebase und Tailwind CSS.
+> Ein vollständiges Projektmanagement-Panel für Design- und Entwicklungsagenturen mit getrennten Bereichen für Admins und Kunden.
 
-## Features
+## 🎯 Überblick
 
-### Kunden-Panel
-- **Dashboard**: Projektübersicht, Status, Fortschritt, nächste Schritte
-- **Projektverlauf**: Timeline mit Filtern (Meilensteine, Notizen, Lieferungen, Anfragen)
-- **Designs & Vorschau**: Figma-Embed, Staging-Links, Versionshistorie
-- **Freigaben**: Freigabe-Items mit Approve/Änderungen-Workflow
-- **Dateien**: Upload via Drag & Drop, Download, Vorschau
-- **Aufgaben**: Kundenaufgaben mit Fälligkeitsdaten
-- **Nachrichten**: Echtzeit-Kommunikation pro Projekt
-- **Profil & Support**: Kontaktinformationen und rechtliche Links
+Flowna Panel ist eine moderne Web-Anwendung, die die Kommunikation und Zusammenarbeit zwischen Agenturen und ihren Kunden vereinfacht. Mit zwei spezialisierten Interfaces – einem für Admins und einem für Kunden – ermöglicht es transparente Projektabwicklung, strukturierte Kommunikation und effizientes Feedback-Management.
 
-### Admin-Panel
-- **Projekte**: Übersicht mit Status, Fortschritt, Suche
-- **Kunden**: Kundenverwaltung mit Kontaktdaten
-- **Termine**: Terminverwaltung und -synchronisierung
-- **Eingänge**: Neue Uploads, Freigaben, Nachrichten
-- **Berichte**: Statistiken und Auslastungsübersicht
-- **Einstellungen**: Branding, Working Hours, Mail-Vorlagen
+## ✨ Features
 
-## Technologie-Stack
+### 👥 Client-Panel (Kundenseite)
 
-- **Framework**: Next.js 16 (App Router)
-- **Styling**: Tailwind CSS 4
-- **UI-Komponenten**: shadcn/ui
-- **Backend**: Firebase (Auth, Firestore, Storage)
-- **Forms**: react-hook-form + zod
-- **Daten**: date-fns für Datumsformate
+Das Client-Panel bietet Kunden eine übersichtliche Oberfläche, um ihre Projekte zu verfolgen und mit der Agentur zu interagieren:
+
+- **📊 Dashboard**  
+  Projektübersicht mit aktuellem Status, Fortschrittsbalken und nächsten Schritten
+
+- **📅 Timeline**  
+  Chronologischer Projektverlauf mit filterbaren Update-Kategorien:
+  - Meilensteine (wichtige Projektphasen)
+  - Notizen (Kommunikation und Hinweise)
+  - Lieferungen (fertige Assets und Deliverables)
+  - Anfragen (Kundenfragen und Rückmeldungen)
+
+- **🎨 Designs & Vorschau**  
+  - Eingebettete Figma-Prototypen
+  - Staging-Links für Live-Vorschauen
+  - Versionshistorie für Design-Iterationen
+
+- **✅ Freigaben**  
+  Strukturierter Freigabe-Workflow:
+  - Approve (Design/Feature freigeben)
+  - Changes (Änderungen anfordern mit Kommentarfunktion)
+
+- **📁 Dateien**  
+  - Upload via Drag & Drop
+  - Download von bereitgestellten Assets
+  - Vorschau-Funktion für Bilder und Dokumente
+
+- **✓ Aufgaben**  
+  To-Do-Liste mit Fälligkeitsdaten für kundenspezifische Action Items
+
+- **💬 Nachrichten**  
+  Echtzeit-Chat-Funktion pro Projekt für direkte Kommunikation
+
+- **👤 Profil & Support**  
+  Kontaktinformationen, Support-Links und rechtliche Dokumente
+
+**Login:** Passwortloser Zugang via Magic Link per E-Mail
+
+### 🔧 Admin-Panel (Agenturseite)
+
+Das Admin-Panel bietet umfassende Verwaltungs- und Steuerungsfunktionen:
+
+- **📋 Projekte**  
+  - Übersicht aller Projekte mit Status-Badges
+  - Fortschrittsanzeige (0-100%)
+  - Suchfunktion und Filteroptionen
+  - Detailansicht mit allen Projektinformationen
+  - Projekterstellung und -bearbeitung
+
+- **🏢 Kunden**  
+  - Kundendatenbank mit Kontaktinformationen
+  - Notizfunktion für interne Anmerkungen
+  - Zuordnung von Projekten zu Kunden
+  - Anlegen neuer Kunden
+
+- **📆 Termine**  
+  - Terminverwaltung für Meetings und Calls
+  - Synchronisierung mit Kalender-Systemen
+  - Status-Tracking (geplant, bestätigt, abgeschlossen)
+
+- **📥 Eingänge (Inbox)**  
+  Zentrale Übersicht über alle neuen Aktivitäten:
+  - Neue Datei-Uploads von Kunden
+  - Ausstehende Freigaben
+  - Ungelesene Nachrichten
+  - Priorisierte Aufgabenliste
+
+- **📊 Berichte**  
+  - Projektstatistiken und KPIs
+  - Auslastungsübersicht
+  - Timeline-Analysen
+
+- **⚙️ Einstellungen**  
+  - Branding-Anpassungen (Logo, Farben)
+  - Arbeitszeiten-Konfiguration
+  - E-Mail-Vorlagen für automatisierte Kommunikation
+
+- **👥 Benutzerverwaltung**  
+  Erstellen neuer Admin- und Client-Accounts
+
+**Login:** Klassische E-Mail + Passwort Authentifizierung
+
+## 🏗️ Technologie-Stack
+
+### Frontend
+
+- **[Next.js 16](https://nextjs.org/)** - React-Framework mit App Router
+- **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-First CSS Framework
+- **[shadcn/ui](https://ui.shadcn.com/)** - Hochwertige UI-Komponenten basierend auf Radix UI
+- **[react-hook-form](https://react-hook-form.com/)** - Performante Formular-Verwaltung
+- **[Zod](https://zod.dev/)** - TypeScript-first Schema-Validierung
+- **[Lucide Icons](https://lucide.dev/)** - Modernes Icon-Set
+- **[date-fns](https://date-fns.org/)** - Moderne JavaScript-Date-Library
+- **[react-dropzone](https://react-dropzone.js.org/)** - Drag & Drop Datei-Upload
+
+### Backend & Services
+
+- **[Firebase Authentication](https://firebase.google.com/products/auth)** - Benutzer-Authentifizierung
+  - Magic Links für Kunden (passwortlos)
+  - E-Mail/Passwort für Admins
+- **[Cloud Firestore](https://firebase.google.com/products/firestore)** - NoSQL Echtzeit-Datenbank
+- **[Firebase Storage](https://firebase.google.com/products/storage)** - Cloud-Speicher für Dateien
+- **Firebase Functions** - Serverless Functions (geplant für E-Mail-Benachrichtigungen)
+
+### Development
+
+- **TypeScript** - Typsicherheit und bessere Developer Experience
+- **ESLint** - Code-Quality und Best Practices
+- **Vercel** - Hosting und Deployment-Plattform
 
 ## Setup
 

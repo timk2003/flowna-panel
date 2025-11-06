@@ -159,19 +159,21 @@ export default function DesignsPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <Label htmlFor="comment">Kommentar *</Label>
-                <Textarea
-                  id="comment"
-                  {...register("comment")}
-                  placeholder="Beschreiben Sie Ihre Änderungswünsche..."
-                  className="mt-2 min-h-[120px]"
-                />
-                {errors.comment && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.comment.message}
-                  </p>
-                )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Label htmlFor="comment">Kommentar *</Label>
+                  <Textarea
+                    id="comment"
+                    {...register("comment")}
+                    placeholder="Beschreiben Sie Ihre Änderungswünsche..."
+                    className="mt-2 min-h-[160px]"
+                  />
+                  {errors.comment && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.comment.message}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button

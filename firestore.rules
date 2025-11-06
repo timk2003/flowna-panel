@@ -79,10 +79,28 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     
+    // App-Einstellungen (z.B. Logo, Farben)
+    match /settings/{docId} {
+      // Alle eingeloggten Nutzer dürfen Einstellungen lesen
+      allow read: if request.auth != null;
+      // Nur Admins dürfen Einstellungen ändern
+      allow write: if isAdmin();
+    }
+
     // Nachrichten
     match /messages/{messageId} {
       allow read: if canAccessProject(resource.data.projectId);
       allow create: if canAccessProject(resource.data.projectId);
+      allow update, delete: if isAdmin();
+    }
+
+    // Ereignis-Log (Inbox)
+    match /events/{eventId} {
+      // Admins sehen alle Events
+      allow read: if isAdmin();
+      // Events werden sowohl von Admin- als auch Client-Aktionen erzeugt
+      allow create: if canAccessProject(request.resource.data.projectId);
+      // Bearbeitung (z. B. als gelesen markieren) nur durch Admins
       allow update, delete: if isAdmin();
     }
     

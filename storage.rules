@@ -9,16 +9,26 @@ service firebase.storage {
     }
     
     function canAccessProject(projectId) {
-      return request.auth != null &&
-        (isAdmin() ||
-         (let u = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
-          let p = firestore.get(/databases/(default)/documents/projects/$(projectId)).data;
-          u.role == 'client' && u.clientId == p.clientId));
+      return request.auth != null && (
+        isAdmin() || (
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'client' &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.clientId ==
+          firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientId
+        )
+      );
     }
     
     match /projects/{projectId}/{allPaths=**} {
       allow read: if canAccessProject(projectId);
       allow write: if canAccessProject(projectId);
+    }
+
+    // Settings-Assets (z.B. Logo unter settings/logo.png)
+    match /settings/{allPaths=**} {
+      // Lesen für eingeloggte Nutzer erlaubt
+      allow read: if request.auth != null;
+      // Schreiben nur für Admins
+      allow write: if isAdmin();
     }
   }
 }

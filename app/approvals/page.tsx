@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, getDocs, doc, updateDoc, limit } from "firebase/firestore"
+import { collection, query, where, getDocs, doc, updateDoc, limit, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { ClientLayout } from "@/components/layouts/ClientLayout"
@@ -56,6 +56,14 @@ export default function ApprovalsPage() {
         decidedAt: new Date(),
         decidedBy: user?.id,
       })
+      await addDoc(collection(db, "events"), {
+        type: "approval_decided",
+        projectId: (await getDocs(query(collection(db, "approvals"), where("__name__", "==", id)))).docs[0]?.data().projectId,
+        title: "Freigabe entschieden",
+        description: "approved",
+        createdAt: serverTimestamp(),
+        read: false,
+      })
       setApprovals((prev) =>
         prev.map((a) =>
           a.id === id
@@ -76,6 +84,14 @@ export default function ApprovalsPage() {
         comment,
         decidedAt: new Date(),
         decidedBy: user?.id,
+      })
+      await addDoc(collection(db, "events"), {
+        type: "approval_decided",
+        projectId: (await getDocs(query(collection(db, "approvals"), where("__name__", "==", id)))).docs[0]?.data().projectId,
+        title: "Freigabe entschieden",
+        description: "changes",
+        createdAt: serverTimestamp(),
+        read: false,
       })
       setApprovals((prev) =>
         prev.map((a) =>

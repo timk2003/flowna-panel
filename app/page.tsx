@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, getDocs, limit } from "firebase/firestore"
+import { collection, query, where, getDocs, limit, doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { ClientLayout } from "@/components/layouts/ClientLayout"
@@ -28,6 +28,12 @@ export default function DashboardPage() {
 
     const loadData = async () => {
       try {
+        // Sicherstellen, dass das User-Dokument existiert (Regelabhängigkeit)
+        const userDoc = await getDoc(doc(db, "users", user.id))
+        if (!userDoc.exists()) {
+          // User-Dokument noch nicht erstellt → später erneut versuchen
+          return
+        }
         // Projekt laden
         const projectsQuery = query(
           collection(db, "projects"),

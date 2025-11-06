@@ -193,39 +193,41 @@ export default function AdminAppointmentsPage() {
             </DialogHeader>
             {editingBooking && (
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    id="status"
-                    value={editingBooking.status}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        status: e.target.value,
-                      })
-                    }
-                    className="mt-2"
-                  >
-                    <option value="pending">Ausstehend</option>
-                    <option value="confirmed">Bestätigt</option>
-                    <option value="completed">Abgeschlossen</option>
-                    <option value="cancelled">Abgesagt</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notizen</Label>
-                  <Textarea
-                    id="notes"
-                    value={editingBooking.notes || ""}
-                    onChange={(e) =>
-                      setEditingBooking({
-                        ...editingBooking,
-                        notes: e.target.value,
-                      })
-                    }
-                    className="mt-2 min-h-[120px]"
-                    placeholder="Notizen zum Termin..."
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      id="status"
+                      value={editingBooking.status}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          status: e.target.value,
+                        })
+                      }
+                      className="mt-2"
+                    >
+                      <option value="pending">Ausstehend</option>
+                      <option value="confirmed">Bestätigt</option>
+                      <option value="completed">Abgeschlossen</option>
+                      <option value="cancelled">Abgesagt</option>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="notes">Notizen</Label>
+                    <Textarea
+                      id="notes"
+                      value={editingBooking.notes || ""}
+                      onChange={(e) =>
+                        setEditingBooking({
+                          ...editingBooking,
+                          notes: e.target.value,
+                        })
+                      }
+                      className="mt-2 min-h-[160px]"
+                      placeholder="Notizen zum Termin..."
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowEditDialog(false)}>

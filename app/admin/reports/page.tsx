@@ -4,15 +4,52 @@ import { AdminLayout } from "@/components/layouts/AdminLayout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProgressBar } from "@/components/ProgressBar"
 import { TrendingUp, Calendar, Clock } from "lucide-react"
+import { useEffect, useState } from "react"
+import { db } from "@/lib/firebase"
+import { collection, getDocs } from "firebase/firestore"
+import { Project } from "@/types"
 
 export default function AdminReportsPage() {
-  // Beispiel-Daten - sollten aus Firestore kommen
-  const stats = {
-    activeProjects: 12,
-    totalProjects: 45,
-    averageDuration: 42, // Tage
-    completionRate: 78,
-  }
+  const [stats, setStats] = useState({
+    activeProjects: 0,
+    totalProjects: 0,
+    averageDuration: 0,
+    completionRate: 0,
+  })
+
+  useEffect(() => {
+    const load = async () => {
+      const snap = await getDocs(collection(db, "projects"))
+      const projects = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[]
+
+      const totalProjects = projects.length
+      const activeProjects = projects.filter((p) => p.status !== "Done").length
+
+      // Durchschnittliche Dauer in Tagen basierend auf createdAt/updatedAt
+      const durations: number[] = projects
+        .map((p) => {
+          const created = p.createdAt?.toDate ? p.createdAt.toDate() : p.createdAt
+          const updated = p.updatedAt?.toDate ? p.updatedAt.toDate() : p.updatedAt
+          if (!created || !updated) return null
+          const ms = Math.max(0, new Date(updated).getTime() - new Date(created).getTime())
+          return ms / (1000 * 60 * 60 * 24)
+        })
+        .filter((v): v is number => typeof v === "number")
+      const averageDuration = durations.length
+        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+        : 0
+
+      // Completion-Rate als Durchschnitt des Fortschritts
+      const progresses: number[] = projects
+        .map((p) => typeof p.progress === "number" ? p.progress : 0)
+      const completionRate = progresses.length
+        ? Math.round(progresses.reduce((a, b) => a + b, 0) / progresses.length)
+        : 0
+
+      setStats({ totalProjects, activeProjects, averageDuration, completionRate })
+    }
+    load()
+  }, [])
 
   return (
     <AdminLayout>
