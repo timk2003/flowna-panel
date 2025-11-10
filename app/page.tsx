@@ -24,7 +24,10 @@ export default function DashboardPage() {
   useEffect(() => {
     // Warte auf Auth-Loading
     if (authLoading) return
-    if (!user?.clientId) return
+    if (!user?.clientId) {
+      setLoading(false)
+      return
+    }
 
     const loadData = async () => {
       try {
@@ -32,6 +35,7 @@ export default function DashboardPage() {
         const userDoc = await getDoc(doc(db, "users", user.id))
         if (!userDoc.exists()) {
           // User-Dokument noch nicht erstellt → später erneut versuchen
+          setLoading(false)
           return
         }
         // Projekt laden
