@@ -3,10 +3,31 @@
 import { ClientLayout } from "@/components/layouts/ClientLayout"
 import { useAuth } from "@/hooks/useAuth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useState } from "react"
 import { Mail, Phone, ExternalLink } from "lucide-react"
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const [name, setName] = useState(user?.name || "")
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      await updateDoc(doc(db, "users", user.id), { name })
+      alert("Name gespeichert")
+    } catch (e) {
+      alert("Fehler beim Speichern")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <ClientLayout>
@@ -21,8 +42,11 @@ export default function ProfilePage() {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Name</p>
-                  <p className="text-lg">{user.name}</p>
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" className="mt-2" value={name} onChange={(e) => setName(e.target.value)} />
+                  <Button className="mt-3" onClick={handleSave} disabled={saving || !name.trim()}>
+                    Speichern
+                  </Button>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">E-Mail</p>
