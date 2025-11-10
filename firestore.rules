@@ -80,7 +80,7 @@ service cloud.firestore {
     // Dateien
     match /files/{fileId} {
       allow read: if canAccessProject(resource.data.projectId);
-      allow create: if canAccessProject(resource.data.projectId);
+      allow create: if canAccessProject(request.resource.data.projectId);
       allow update, delete: if isAdmin();
     }
     
@@ -95,7 +95,7 @@ service cloud.firestore {
     // Nachrichten
     match /messages/{messageId} {
       allow read: if canAccessProject(resource.data.projectId);
-      allow create: if canAccessProject(resource.data.projectId);
+      allow create: if canAccessProject(request.resource.data.projectId);
       allow update, delete: if isAdmin();
     }
 
