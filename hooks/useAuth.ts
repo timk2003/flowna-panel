@@ -11,7 +11,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink
 } from "firebase/auth"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import { User } from "@/types"
 
@@ -31,13 +31,28 @@ export function useAuth() {
           
           if (userDoc.exists()) {
             // User-Dokument existiert bereits
-            const userData = userDoc.data()
+            const userData = userDoc.data() as any
+            let resolvedClientId = userData.clientId
+
+            // Falls keine clientId im User gespeichert ist, versuche Zuordnung über Clients (E-Mail)
+            if (!resolvedClientId && userData.role === "client") {
+              const email = (userData.email || firebaseUser.email || "").toLowerCase()
+              if (email) {
+                try {
+                  const clientsSnap = await getDocs(query(collection(db, "clients"), where("contactEmail", "==", email)))
+                  if (!clientsSnap.empty) {
+                    resolvedClientId = clientsSnap.docs[0].id
+                    await updateDoc(userDocRef, { clientId: resolvedClientId })
+                  }
+                } catch {/* ignore */}
+              }
+            }
             setUser({
               id: firebaseUser.uid,
               name: userData.name,
               email: userData.email || firebaseUser.email || "",
               role: userData.role,
-              clientId: userData.clientId,
+              clientId: resolvedClientId,
               photoURL: userData.photoURL,
               createdAt: userData.createdAt?.toDate() || new Date(),
             })
@@ -45,11 +60,23 @@ export function useAuth() {
             // User-Dokument existiert nicht - erstelle es automatisch
             console.log("User document not found, creating new one for:", firebaseUser.uid)
             
+            // Versuche clientId anhand der E-Mail automatisch zu ermitteln
+            let inferredClientId: string | undefined = undefined
+            try {
+              const email = (firebaseUser.email || "").toLowerCase()
+              if (email) {
+                const clientsSnap = await getDocs(query(collection(db, "clients"), where("contactEmail", "==", email)))
+                if (!clientsSnap.empty) {
+                  inferredClientId = clientsSnap.docs[0].id
+                }
+              }
+            } catch {/* ignore */}
+
             const newUserData = {
               name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
               email: firebaseUser.email || "",
               role: "client" as const, // Default für Magic Link Login
-              clientId: undefined, // Muss später vom Admin zugewiesen werden
+              clientId: inferredClientId, // wenn möglich automatisch zuweisen
               photoURL: firebaseUser.photoURL || undefined,
               createdAt: new Date(),
             }
