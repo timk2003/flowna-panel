@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, query, where, getDocs, limit, doc, getDoc } from "firebase/firestore"
+import { collection, query, where, getDocs, limit, doc, getDoc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { ClientLayout } from "@/components/layouts/ClientLayout"
@@ -24,7 +24,7 @@ export default function DashboardPage() {
   useEffect(() => {
     // Warte auf Auth-Loading
     if (authLoading) return
-    if (!user?.clientId) {
+    if (!user) {
       setLoading(false)
       return
     }
@@ -38,10 +38,29 @@ export default function DashboardPage() {
           setLoading(false)
           return
         }
+        // clientId ermitteln: aus User oder über Clients anhand E-Mail
+        let clientIdToUse = user.clientId
+        const userData = userDoc.data() as any
+        if (!clientIdToUse && userData?.role === "client") {
+          const clientsSnap = await getDocs(
+            query(
+              collection(db, "clients"),
+              where("contactEmail", "==", (userData.email || user.email || "").toLowerCase())
+            )
+          )
+          if (!clientsSnap.empty) {
+            clientIdToUse = clientsSnap.docs[0].id
+            await updateDoc(doc(db, "users", user.id), { clientId: clientIdToUse })
+          }
+        }
+        if (!clientIdToUse) {
+          setLoading(false)
+          return
+        }
         // Projekt laden
         const projectsQuery = query(
           collection(db, "projects"),
-          where("clientId", "==", user.clientId),
+          where("clientId", "==", clientIdToUse),
           limit(1)
         )
         const projectsSnapshot = await getDocs(projectsQuery)
