@@ -31,15 +31,22 @@ export default function MessagesPage() {
   })
 
   useEffect(() => {
-    if (!user?.clientId) return
+    if (!user) return
 
     const loadProject = async () => {
       try {
-        const projectsQuery = query(
-          collection(db, "projects"),
-          where("clientId", "==", user.clientId),
-          limit(1)
-        )
+        let clientId = user.clientId
+        // Fallback: clientId via clients.contactEmail ableiten
+        if (!clientId) {
+          const clientsSnap = await getDocs(
+            query(collection(db, "clients"), where("contactEmail", "==", (user.email || "").toLowerCase()), limit(1))
+          )
+          if (!clientsSnap.empty) {
+            clientId = clientsSnap.docs[0].id
+          }
+        }
+        if (!clientId) return
+        const projectsQuery = query(collection(db, "projects"), where("clientId", "==", clientId), limit(1))
         const projectsSnapshot = await getDocs(projectsQuery)
         if (!projectsSnapshot.empty) {
           const pid = projectsSnapshot.docs[0].id
@@ -76,10 +83,12 @@ export default function MessagesPage() {
         try {
           const userDoc = await getDoc(doc(db, "users", userId))
           if (userDoc.exists()) {
-            names[userId] = userDoc.data().name
+            names[userId] = (userDoc.data() as any).name || "Unbekannt"
+          } else {
+            names[userId] = userId === user?.id ? (user?.name || "Du") : "Team"
           }
         } catch (error) {
-          names[userId] = "Unbekannt"
+          names[userId] = userId === user?.id ? (user?.name || "Du") : "Team"
         }
       }
       setUserNames(names)
